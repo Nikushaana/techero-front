@@ -14,23 +14,17 @@ export async function middleware(request: NextRequest) {
     const refreshToken = request.cookies.get('refreshToken')?.value;
 
     let newCookies: string[] = [];
-    
+
     // This allows us to inject the new token into the current request chain.
-    const requestHeaders = new Headers(request.headers); 
+    const requestHeaders = new Headers(request.headers);
 
     // --- 1. No access token: Try to refresh ---
     if (!accessToken && refreshToken) {
         try {
-            const internalOrigin = process.env.NODE_ENV === 'production' 
-            ? 'http://127.0.0.1:3000' 
-            : request.nextUrl.origin;
-
-            const refreshResponse = await fetch(`${internalOrigin}/api/auth/refresh-token`, {
+            const refreshResponse = await fetch(`https://api.techero.ge/auth/refresh-token`, {
                 method: 'POST',
                 headers: {
                     'Cookie': `refreshToken=${refreshToken}`,
-                    'Host': 'techero.ge',
-                    'User-Agent': request.headers.get('user-agent') || '',
                 }
             });
 
@@ -40,7 +34,7 @@ export async function middleware(request: NextRequest) {
                 const authCookie = newCookies.find(c => c.trim().startsWith('accessToken='));
                 if (authCookie) {
                     accessToken = authCookie.split(';')[0].split('=')[1];
-                    
+
                     requestHeaders.set('Cookie', `accessToken=${accessToken}; refreshToken=${refreshToken}`);
                 }
             }
@@ -115,8 +109,8 @@ export async function middleware(request: NextRequest) {
 
         // Handle Admin/Staff layout mismatches on regular client pages
         if (!path.startsWith('/admin') && !path.startsWith('/staff') && role !== "individual" && role !== "company") {
-            const response = path.startsWith("/dashboard") 
-                ? NextResponse.redirect(new URL("/auth/login", request.url)) 
+            const response = path.startsWith("/dashboard")
+                ? NextResponse.redirect(new URL("/auth/login", request.url))
                 : NextResponse.next();
 
             response.cookies.delete('accessToken');
@@ -144,7 +138,7 @@ export async function middleware(request: NextRequest) {
                 headers: requestHeaders,
             }
         });
-        
+
         return createFinalResponse(response);
 
     } catch (error) {
@@ -158,5 +152,5 @@ export async function middleware(request: NextRequest) {
 }
 
 export const config = {
-    matcher: ['/((?!api|_next|[^?]*\\.[^?]+$).*)'],
+    matcher: ['/admin/:path*', '/staff/:path*', '/dashboard/:path*'],
 };
