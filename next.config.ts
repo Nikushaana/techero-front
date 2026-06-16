@@ -5,7 +5,7 @@ const nextConfig: NextConfig = {
     return [
       {
         source: '/api/:path*',
-        destination: 'https://techero.ge/api/:path*',
+        destination: 'https://api.techero.ge/:path*',
       },
     ];
   },
