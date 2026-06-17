@@ -6,25 +6,28 @@ export async function middleware(request: NextRequest) {
     const path = request.nextUrl.pathname;
 
     // Skip middleware for authentication API routes
-    // if (path.startsWith('/api/auth/')) {
-    //     return NextResponse.next();
-    // }
+    if (path.startsWith('/api/auth/')) {
+        return NextResponse.next();
+    }
 
     let accessToken = request.cookies.get('accessToken')?.value;
     const refreshToken = request.cookies.get('refreshToken')?.value;
 
     let newCookies: string[] = [];
+    
+    const requestHeaders = new Headers(request.headers); 
 
-    // This allows us to inject the new token into the current request chain.
-    const requestHeaders = new Headers(request.headers);
-
-    // --- 1. No access token: Try to refresh ---
+    // --- 1. No access token: Try to refresh from external API ---
     if (!accessToken && refreshToken) {
         try {
-            const refreshResponse = await fetch(`https://api.techero.ge/auth/refresh-token`, {
+            // Use your new external API URL
+            const API_BASE = process.env.NEXT_PUBLIC_API_URL || 'https://api.techero.ge';
+
+            const refreshResponse = await fetch(`${API_BASE}/auth/refresh-token`, {
                 method: 'POST',
                 headers: {
                     'Cookie': `refreshToken=${refreshToken}`,
+                    'User-Agent': request.headers.get('user-agent') || '',
                 }
             });
 
@@ -34,7 +37,6 @@ export async function middleware(request: NextRequest) {
                 const authCookie = newCookies.find(c => c.trim().startsWith('accessToken='));
                 if (authCookie) {
                     accessToken = authCookie.split(';')[0].split('=')[1];
-
                     requestHeaders.set('Cookie', `accessToken=${accessToken}; refreshToken=${refreshToken}`);
                 }
             }
@@ -109,8 +111,8 @@ export async function middleware(request: NextRequest) {
 
         // Handle Admin/Staff layout mismatches on regular client pages
         if (!path.startsWith('/admin') && !path.startsWith('/staff') && role !== "individual" && role !== "company") {
-            const response = path.startsWith("/dashboard")
-                ? NextResponse.redirect(new URL("/auth/login", request.url))
+            const response = path.startsWith("/dashboard") 
+                ? NextResponse.redirect(new URL("/auth/login", request.url)) 
                 : NextResponse.next();
 
             response.cookies.delete('accessToken');
@@ -138,7 +140,7 @@ export async function middleware(request: NextRequest) {
                 headers: requestHeaders,
             }
         });
-
+        
         return createFinalResponse(response);
 
     } catch (error) {
