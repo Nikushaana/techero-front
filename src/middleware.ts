@@ -5,17 +5,12 @@ export async function middleware(request: NextRequest) {
     const url = request.nextUrl.clone();
     const path = request.nextUrl.pathname;
 
-    // Skip middleware for authentication API routes
-    if (path.startsWith('/api/auth/')) {
-        return NextResponse.next();
-    }
-
     let accessToken = request.cookies.get('accessToken')?.value;
     const refreshToken = request.cookies.get('refreshToken')?.value;
 
     let newCookies: string[] = [];
-    
-    const requestHeaders = new Headers(request.headers); 
+
+    const requestHeaders = new Headers(request.headers);
 
     // --- 1. No access token: Try to refresh from external API ---
     if (!accessToken && refreshToken) {
@@ -111,8 +106,8 @@ export async function middleware(request: NextRequest) {
 
         // Handle Admin/Staff layout mismatches on regular client pages
         if (!path.startsWith('/admin') && !path.startsWith('/staff') && role !== "individual" && role !== "company") {
-            const response = path.startsWith("/dashboard") 
-                ? NextResponse.redirect(new URL("/auth/login", request.url)) 
+            const response = path.startsWith("/dashboard")
+                ? NextResponse.redirect(new URL("/auth/login", request.url))
                 : NextResponse.next();
 
             response.cookies.delete('accessToken');
@@ -140,7 +135,7 @@ export async function middleware(request: NextRequest) {
                 headers: requestHeaders,
             }
         });
-        
+
         return createFinalResponse(response);
 
     } catch (error) {
@@ -154,5 +149,5 @@ export async function middleware(request: NextRequest) {
 }
 
 export const config = {
-    matcher: ['/((?!api|_next|[^?]*\\.[^?]+$).*)'],
+    matcher: ['/((?!_next|[^?]*\\.[^?]+$).*)'],
 };
